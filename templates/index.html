@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MadeWhere - Find American-Made Goods</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The application is structured as an interactive, single-page directory. The core user flow is centered on a prominent search and filtering sidebar that dynamically updates a grid of brand cards. This task-oriented design was chosen to allow users to immediately act on the primary goal of finding specific types of brands without navigating away from the main discovery interface. Detailed information is presented in modals to maintain user context. This approach directly implements the MVP's core 'Search & Discovery' functionality from the source report in the most user-friendly way. -->
+    <!-- Visualization & Content Choices: Source: Brand list & tags. Goal: Organize/Compare. Method: Interactive card grid with visual tags. Interaction: Live filtering via sidebar controls. Justification: Enables rapid scanning and comparison. | Source: Brand Details. Goal: Inform. Method: HTML modal. Interaction: Click card to view. Justification: Provides deep info without losing search context. | Source: Distribution of 'Made In' status. Goal: Inform/Context. Method: Chart.js Donut Chart. Interaction: Hover for tooltips. Justification: Gives a high-level overview of the data landscape. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8; /* Warm off-white */
+            color: #404040; /* Dark gray for text */
+        }
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin: 0.25rem;
+        }
+        .tag-verified { background-color: #E0F2F1; color: #00796B; }
+        .tag-reported { background-color: #FFF3E0; color: #EF6C00; }
+        .tag-usa { background-color: #E3F2FD; color: #1565C0; }
+        .tag-foreign { background-color: #FCE4EC; color: #AD1457; }
+        .filter-btn.active {
+            background-color: #4A5568;
+            color: #FFFFFF;
+            border-color: #4A5568;
+        }
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: auto;
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="app" class="container mx-auto p-4 md:p-8">
+        
+        <header class="text-center mb-8 md:mb-12">
+            <div class="relative">
+                <h1 class="text-4xl md:text-5xl font-bold text-gray-800">MadeWhere</h1>
+                <nav class="absolute top-1/2 right-0 -translate-y-1/2">
+                    <a href="/blog" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition">Blog</a>
+                </nav>
+            </div>
+            <p class="mt-2 text-lg text-gray-600">Your guide to transparent manufacturing. Find brands you can trust.</p>
+
+            <!-- Social Icons Start -->
+            <div class="mt-6 flex justify-center items-center space-x-5">
+                <a href="#" class="text-gray-400 hover:text-gray-600 transition">
+                    <span class="sr-only">Instagram</span>
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12.315 2c-4.02.053-4.47.19-6.055.864C4.69 3.553 3.553 4.69 2.864 6.26c-.675 1.585-.81 2.035-.864 6.055-.053 4.02-.19 4.47-.864 6.055C1.81 20.45 2.95 21.588 4.52 22.28c1.585.675 2.035.81 6.055.864 4.02.053 4.47.19 6.055-.864 1.57-.692 2.708-1.83 3.398-3.398.675-1.585.81-2.035.864-6.055.053-4.02.19-4.47-.864-6.055C21.55 4.69 20.413 3.553 18.84 2.864 17.256 2.19 16.806 2.053 12.785 2h-.47zm-1.01 1.8h2.02c3.84 0 4.23.14 5.72.78.6.26 1.05.54 1.5.99.45.45.73.9.99 1.5.64 1.49.78 1.88.78 5.72s-.14 4.23-.78 5.72c-.26.6-.54 1.05-.99 1.5-.45-.45-.9.73-1.5.99-1.49.64-1.88.78-5.72.78h-2.02c-3.84 0-4.23-.14-5.72-.78-.6-.26-1.05-.54-1.5-.99-.45-.45-.73-.9-.99-1.5-.64-1.49-.78-1.88-.78-5.72s.14-4.23.78-5.72c.26-.6.54-1.05.99-1.5.45-.45.9-.73 1.5-.99 1.49-.64 1.88-.78 5.72-.78zM12 7.25a4.75 4.75 0 100 9.5 4.75 4.75 0 000-9.5zM12 15a3 3 0 110-6 3 3 0 010 6zm6.36-8.36a1.125 1.125 0 100-2.25 1.125 1.125 0 000 2.25z" clip-rule="evenodd" /></svg>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-gray-600 transition">
+                    <span class="sr-only">TikTok</span>
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-2.5.04-4.87-1.1-6.59-3.02-1.7-1.9-2.42-4.5-2.24-7.15.04-.6.12-1.19.23-1.77.14-.77.34-1.54.58-2.31.57-1.86 1.6-3.6 3.01-5.01 1.49-1.48 3.33-2.49 5.34-2.87.18-.04.36-.07.54-.11.5-.11 1-.24 1.5-.35.32-.06.63-.13.95-.19.04-.01.07-.02.11-.03v.01zM10.8 4.41c-1.44.35-2.73 1-3.79 2.04-1.02 1-1.81 2.22-2.32 3.55-.45 1.17-.7 2.44-.78 3.75-.06.97-.04 1.95.04 2.92.12 1.43.48 2.84 1.15 4.1.91 1.74 2.47 3.14 4.27 3.82 1.79.68 3.75.79 5.6.38 1.97-.43 3.7-1.52 4.96-3.01 1.02-1.2 1.62-2.65 1.77-4.17.06-.61.07-1.22.07-1.83v-3.11c-.88.08-1.75.3-2.57.62-.25.1-.5.2-.74.31-.07.03-.14.06-.21.1-.01.01-.02.01-.03.02h-.01c-.48.21-.94.46-1.39.74-.23.14-.46.28-.69.43-.59.38-1.16.8-1.72 1.25-.01.01-.02.02-.03.03-.01.01-.01.01-.02.02-.33.25-.65.51-.96.79-.2.18-.4.36-.59.55-.25.24-.48.5-.7.76-.01.01-.02.02-.02.03-.3.33-.58.69-.82 1.07-.22.36-.42.74-.59 1.13-.15.34-.28.7-.4 1.06-.11.33-.21.66-.3.99-.08.31-.14.62-.19.94-.04.28-.08.57-.1.85-.01.12-.02.24-.02.36v.01c.01-.93-.01-1.87.01-2.8-.02-2.89-.02-5.78.01-8.67.01-.06.01-.13.02-.19.09-.59.25-1.17.47-1.75.14-.37.31-.74.5-1.1.28-.52.62-1.02 1-1.48.01-.01.01-.02.02-.02.48-.61 1.03-1.15 1.65-1.63.18-.14.37-.27.56-.4.49-.33 1-.63 1.53-.89.28-.14.56-.27.84-.39.29-.12.58-.23.88-.33.29-.1.59-.18.88-.26.26-.07.52-.13.78-.18.06-.01.13-.02.19-.03.43-.09.86-.16 1.29-.21.06-.01.13-.01.19-.02-.01-.01-.01-.01 0 0z"/></svg>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-gray-600 transition">
+                    <span class="sr-only">Facebook</span>
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" /></svg>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-gray-600 transition">
+                    <span class="sr-only">X (formerly Twitter)</span>
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                </a>
+            </div>
+            <!-- Social Icons End -->
+        </header>
+
+        <div class="lg:grid lg:grid-cols-12 lg:gap-8">
+            <aside class="lg:col-span-3 mb-8 lg:mb-0">
+                <div class="sticky top-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-xl font-semibold mb-4">Find a Brand</h2>
+                    <input type="text" id="search-input" placeholder="Search brands or products..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-6">
+
+                    <div id="filters">
+                        <h3 class="font-semibold mb-3">Category</h3>
+                        <div class="flex flex-wrap gap-2 mb-6" data-filter-group="category">
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="all">All</button>
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="living_room">Living Room</button>
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="bedroom">Bedroom</button>
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="office">Office</button>
+                        </div>
+
+                        <h3 class="font-semibold mb-3">Origin & Ownership</h3>
+                        <div class="flex flex-wrap gap-2 mb-6" data-filter-group="origin">
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="all">All</button>
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="made_in_usa">🇺🇸 Made in USA</button>
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="us_owned">🇺🇸 US-Owned</button>
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="foreign_owned">🌐 Foreign-Owned</button>
+                        </div>
+
+                        <h3 class="font-semibold mb-3">Verification</h3>
+                         <div class="flex flex-wrap gap-2 mb-6" data-filter-group="verification">
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="all">All</button>
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="verified">✅ Verified</button>
+                            <button class="filter-btn px-3 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100" data-filter="reported">📝 Brand Reported</button>
+                        </div>
+                    </div>
+                     <div class="text-center mt-6">
+                        <button id="suggest-brand-btn" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
+                            Suggest a Brand
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <main class="lg:col-span-9">
+                <div id="stats-section" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-8">
+                     <h2 class="text-xl text-center font-semibold mb-4">Our Vetted Database</h2>
+                     <p class="text-center text-gray-600 mb-4">This chart provides a high-level overview of the manufacturing origins of the brands currently in our database. Interact with the chart to see the breakdown and use the filters on the left to explore specific brands.</p>
+                     <div class="chart-container">
+                        <canvas id="origin-chart"></canvas>
+                     </div>
+                </div>
+                <div id="brand-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                </div>
+                 <div id="no-results" class="text-center py-16 hidden">
+                    <h3 class="text-2xl font-semibold text-gray-700">No Brands Found</h3>
+                    <p class="text-gray-500 mt-2">Try adjusting your search or filters.</p>
+                </div>
+            </main>
+        </div>
+
+    </div>
+
+    <div id="brand-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" id="brand-modal-content">
+        </div>
+    </div>
+    
+    <div id="suggest-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8">
+             <h2 class="text-2xl font-bold mb-2">Suggest a Brand</h2>
+             <p class="text-gray-600 mb-6">Help us grow our database! If you know a great brand we should vet, let us know.</p>
+             <form id="suggest-form">
+                <div class="mb-4">
+                    <label for="brand_name" class="block text-sm font-medium text-gray-700 mb-1">Brand Name</label>
+                    <input type="text" id="brand_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <div class="mb-6">
+                    <label for="brand_website" class="block text-sm font-medium text-gray-700 mb-1">Brand Website</label>
+                    <input type="url" id="brand_website" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="https://example.com" required>
+                </div>
+                <div id="suggest-message" class="text-center text-green-600 font-semibold mb-4"></div>
+                <div class="flex justify-end gap-3">
+                     <button type="button" id="close-suggest-modal-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">Submit</button>
+                </div>
+             </form>
+        </div>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const brands = [
+        {
+            id: 1,
+            name: "Floyd",
+            logo: "https://placehold.co/100x40/e2e8f0/4a5568?text=Floyd",
+            categories: ["living_room", "bedroom"],
+            tags: ["made_in_usa", "us_owned", "reported"],
+            summary: "Designs and manufactures adaptable furniture for modern living. Known for its modular bed frames and sofas, with a commitment to domestic production.",
+            verdict: "Parts are sourced from the US and globally, with primary manufacturing and assembly in the United States. Ownership is private and US-based.",
+            location: "Detroit, MI",
+            website: "https://floydhome.com/"
+        },
+        {
+            id: 2,
+            name: "Herman Miller",
+            logo: "https://placehold.co/100x40/e2e8f0/4a5568?text=Herman+Miller",
+            categories: ["office"],
+            tags: ["made_in_usa", "us_owned", "verified"],
+            summary: "An iconic American company famous for its high-performance office chairs like the Aeron and Eames Lounge Chair. A leader in ergonomic design.",
+            verdict: "Vast majority of products for the North American market are manufactured in Michigan. The company is publicly traded and US-based.",
+            location: "Zeeland, MI",
+            website: "https://www.hermanmiller.com/"
+        },
+        {
+            id: 3,
+            name: "Room & Board",
+            logo: "https://placehold.co/100x40/e2e8f0/4a5568?text=R%26B",
+            categories: ["living_room", "bedroom", "office"],
+            tags: ["made_in_usa", "us_owned", "verified"],
+            summary: "Retailer of modern furniture and home decor. Over 90% of their products are manufactured in the United States by small, family-owned companies.",
+            verdict: "Strong commitment to American manufacturing, partnering with numerous domestic workshops. A model for supporting local craft.",
+            location: "Minneapolis, MN",
+            website: "https://www.roomandboard.com/"
+        },
+        {
+            id: 4,
+            name: "La-Z-Boy",
+            logo: "https://placehold.co/100x40/e2e8f0/4a5568?text=La-Z-Boy",
+            categories: ["living_room"],
+            tags: ["assembled_in_usa", "us_owned", "reported"],
+            summary: "Famous for inventing the recliner, La-Z-Boy is a household name for comfortable living room furniture.",
+            verdict: "Operates several manufacturing plants in the US where upholstery is done, but sources components both domestically and globally. The term 'Assembled in USA' is more accurate.",
+            location: "Monroe, MI",
+            website: "https://www.la-z-boy.com/"
+        },
+        {
+            id: 5,
+            name: "Polywood",
+            logo: "https://placehold.co/100x40/e2e8f0/4a5568?text=Polywood",
+            categories: ["outdoor"],
+            tags: ["made_in_usa", "us_owned", "verified"],
+            summary: "Creates durable, all-weather outdoor furniture from recycled plastics like milk jugs and detergent bottles.",
+            verdict: "A clear example of 'Made in USA.' The entire process from recycling plastic to extruding lumber and building the furniture happens in their US facilities.",
+            location: "Syracuse, IN",
+            website: "https://www.polywood.com/"
+        },
+        {
+            id: 6,
+            name: "Vaughan-Bassett",
+            logo: "https://placehold.co/100x40/e2e8f0/4a5568?text=V-B",
+            categories: ["bedroom"],
+            tags: ["made_in_usa", "us_owned", "verified"],
+            summary: "The largest manufacturer of wooden adult bedroom furniture in the United States. Focuses on quality solid wood construction.",
+            verdict: "Employs hundreds of people in its Virginia and North Carolina plants, using timber sourced primarily from the American Southeast.",
+            location: "Galax, VA",
+            website: "https://www.vaughan-bassett.com/"
+        },
+        {
+            id: 7,
+            name: "IKEA",
+            logo: "https://placehold.co/100x40/e2e8f0/4a5568?text=IKEA",
+            categories: ["living_room", "bedroom", "office"],
+            tags: ["foreign_owned", "reported"],
+            summary: "A Swedish multinational conglomerate that designs and sells ready-to-assemble furniture, kitchen appliances and home accessories.",
+            verdict: "Products are sourced from a massive global supply chain, with manufacturing in many countries including China, Poland, and Vietnam. While some production exists in the US, it is not a 'Made in USA' brand. Owned by a foundation in the Netherlands.",
+            location: "Global",
+            website: "https://www.ikea.com/"
+        },
+        {
+            id: 8,
+            name: "West Elm",
+            logo: "https://placehold.co/100x40/e2e8f0/4a5568?text=West+Elm",
+            categories: ["living_room", "bedroom"],
+            tags: ["us_owned", "assembled_in_usa", "reported"],
+            summary: "A brand focused on modern design and sustainable production. Part of the Williams-Sonoma portfolio.",
+            verdict: "Owned by a US company (Williams-Sonoma). While they have initiatives for 'Made in USA' collections and local artisans, a significant portion of their main product line is manufactured overseas and imported.",
+            location: "Brooklyn, NY (HQ)",
+            website: "https://www.westelm.com/"
+        },
+         {
+            id: 9,
+            name: "Steelcase",
+            logo: "https://placehold.co/100x40/e2e8f0/4a5568?text=Steelcase",
+            categories: ["office"],
+            tags: ["made_in_usa", "us_owned", "verified"],
+            summary: "A leading manufacturer of office furniture, architectural and technology products for office environments and the education, health care and retail industries.",
+            verdict: "With a large manufacturing footprint in the US, particularly in Michigan, Steelcase is a prime example of American manufacturing for the commercial furniture market.",
+            location: "Grand Rapids, MI",
+            website: "https://www.steelcase.com/"
+        },
+        {
+            id: 10,
+            name: "Ashley Furniture",
+            logo: "https://placehold.co/100x40/e2e8f0/4a5568?text=Ashley",
+            categories: ["living_room", "bedroom"],
+            tags: ["us_owned", "assembled_in_usa", "reported"],
+            summary: "One of the largest furniture manufacturers in the world, offering a wide range of products.",
+            verdict: "Operates a global supply chain. While they have manufacturing and assembly plants in the US, many products and components are imported from countries like China and Vietnam. US-owned.",
+            location: "Arcadia, WI",
+            website: "https://www.ashleyfurniture.com/"
+        }
+    ];
+
+    const brandGrid = document.getElementById('brand-grid');
+    const noResultsDiv = document.getElementById('no-results');
+    const searchInput = document.getElementById('search-input');
+    const filterContainer = document.getElementById('filters');
+    const brandModal = document.getElementById('brand-modal');
+    const brandModalContent = document.getElementById('brand-modal-content');
+    const suggestBrandBtn = document.getElementById('suggest-brand-btn');
+    const suggestModal = document.getElementById('suggest-modal');
+    const closeSuggestModalBtn = document.getElementById('close-suggest-modal-btn');
+    const suggestForm = document.getElementById('suggest-form');
+    const suggestMessage = document.getElementById('suggest-message');
+    const originChartCanvas = document.getElementById('origin-chart').getContext('2d');
+    let originChart;
+
+    const filters = {
+        category: 'all',
+        origin: 'all',
+        verification: 'all',
+    };
+
+    const tagLabels = {
+        made_in_usa: '🇺🇸 Made in USA',
+        assembled_in_usa: '🇺🇸 Assembled in USA',
+        us_owned: '🇺🇸 US-Owned',
+        foreign_owned: '🌐 Foreign-Owned',
+        verified: '✅ Independently Verified',
+        reported: '📝 Brand Reported',
+    };
+
+    const tagClasses = {
+        made_in_usa: 'tag-usa',
+        assembled_in_usa: 'tag-usa',
+        us_owned: 'tag-usa',
+        foreign_owned: 'tag-foreign',
+        verified: 'tag-verified',
+        reported: 'tag-reported',
+    };
+
+    const renderBrands = (brandsToRender) => {
+        brandGrid.innerHTML = '';
+        if (brandsToRender.length === 0) {
+            noResultsDiv.classList.remove('hidden');
+        } else {
+            noResultsDiv.classList.add('hidden');
+        }
+        brandsToRender.forEach(brand => {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer border border-gray-100';
+            card.dataset.brandId = brand.id;
+            
+            let tagsHtml = brand.tags.map(tag => {
+                return `<span class="${tagClasses[tag]} tag">${tagLabels[tag]}</span>`;
+            }).join('');
+
+            card.innerHTML = `
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <img src="${brand.logo}" alt="${brand.name} logo" class="h-10" onerror="this.onerror=null;this.src='https://placehold.co/100x40/e2e8f0/4a5568?text=Image';">
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">${brand.name}</h3>
+                    <p class="text-gray-600 text-sm h-16">${brand.summary.substring(0, 100)}${brand.summary.length > 100 ? '...' : ''}</p>
+                    <div class="mt-4 flex flex-wrap">
+                        ${tagsHtml}
+                    </div>
+                </div>
+            `;
+            brandGrid.appendChild(card);
+        });
+    };
+    
+    const applyFilters = () => {
+        const searchTerm = searchInput.value.toLowerCase();
+        let filteredBrands = brands.filter(brand => {
+            const nameMatch = brand.name.toLowerCase().includes(searchTerm);
+            const summaryMatch = brand.summary.toLowerCase().includes(searchTerm);
+            const categoryMatch = filters.category === 'all' || brand.categories.includes(filters.category);
+            const originMatch = filters.origin === 'all' || brand.tags.includes(filters.origin);
+            const verificationMatch = filters.verification === 'all' || brand.tags.includes(filters.verification);
+            
+            return (nameMatch || summaryMatch) && categoryMatch && originMatch && verificationMatch;
+        });
+        renderBrands(filteredBrands);
+    };
+
+    filterContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('filter-btn')) {
+            const btn = e.target;
+            const filterGroup = btn.closest('[data-filter-group]').dataset.filterGroup;
+            const filterValue = btn.dataset.filter;
+
+            filters[filterGroup] = filterValue;
+            
+            const groupButtons = btn.parentElement.querySelectorAll('.filter-btn');
+            groupButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            applyFilters();
+        }
+    });
+
+    searchInput.addEventListener('input', applyFilters);
+
+    brandGrid.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-brand-id]');
+        if (card) {
+            const brandId = parseInt(card.dataset.brandId);
+            const brand = brands.find(b => b.id === brandId);
+            if (brand) {
+                openBrandModal(brand);
+            }
+        }
+    });
+    
+    const openBrandModal = (brand) => {
+        let tagsHtml = brand.tags.map(tag => {
+            return `<span class="${tagClasses[tag]} tag">${tagLabels[tag]}</span>`;
+        }).join('');
+
+        brandModalContent.innerHTML = `
+            <div class="p-6 md:p-8">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-900">${brand.name}</h2>
+                        <p class="text-gray-500">HQ: ${brand.location}</p>
+                    </div>
+                    <button id="close-brand-modal" class="text-gray-500 hover:text-gray-800">&times;</button>
+                </div>
+
+                <div class="mt-6 border-t pt-6">
+                    <h4 class="font-semibold text-lg mb-2">The MadeWhere Verdict</h4>
+                    <p class="text-gray-700 mb-6">${brand.verdict}</p>
+                    
+                    <h4 class="font-semibold text-lg mb-2">Brand Summary</h4>
+                    <p class="text-gray-700 mb-6">${brand.summary}</p>
+
+                    <div class="mb-6">
+                        <h4 class="font-semibold text-lg mb-3">Tags</h4>
+                        <div class="flex flex-wrap">${tagsHtml}</div>
+                    </div>
+
+                    <a href="${brand.website}" target="_blank" rel="noopener noreferrer" class="inline-block w-full text-center bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+                        Visit Website &rarr;
+                    </a>
+                </div>
+            </div>
+        `;
+        brandModal.classList.remove('opacity-0', 'pointer-events-none');
+        document.getElementById('close-brand-modal').addEventListener('click', closeBrandModal);
+    };
+
+    const closeBrandModal = () => {
+        brandModal.classList.add('opacity-0', 'pointer-events-none');
+    };
+    
+    const openSuggestModal = () => {
+        suggestModal.classList.remove('opacity-0', 'pointer-events-none');
+    };
+    
+    const closeSuggestModal = () => {
+        suggestModal.classList.add('opacity-0', 'pointer-events-none');
+    };
+    
+    suggestBrandBtn.addEventListener('click', openSuggestModal);
+    closeSuggestModalBtn.addEventListener('click', closeSuggestModal);
+    
+    suggestModal.addEventListener('click', (e) => {
+        if (e.target === suggestModal) {
+            closeSuggestModal();
+        }
+    });
+
+    brandModal.addEventListener('click', (e) => {
+        if (e.target === brandModal) {
+            closeBrandModal();
+        }
+    });
+
+    suggestForm.addEventListener('submit', function(event) {
+        event.preventDefault(); 
+        suggestMessage.textContent = ''; 
+
+        const brandNameInput = document.getElementById('brand_name');
+        const brandWebsiteInput = document.getElementById('brand_website');
+
+        const formData = {
+            brand_name: brandNameInput.value,
+            brand_website: brandWebsiteInput.value
+        };
+
+        fetch('/suggest', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            brandNameInput.value = '';
+            brandWebsiteInput.value = '';
+            suggestMessage.textContent = data.message;
+            suggestMessage.classList.remove('text-red-600');
+            suggestMessage.classList.add('text-green-600');
+
+            setTimeout(() => {
+                closeSuggestModal();
+                suggestMessage.textContent = '';
+            }, 2500);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            suggestMessage.textContent = 'An error occurred. Please try again.';
+            suggestMessage.classList.remove('text-green-600');
+            suggestMessage.classList.add('text-red-600');
+        });
+    });
+    
+    const initializeChart = () => {
+        const originCounts = brands.reduce((acc, brand) => {
+            if (brand.tags.includes('made_in_usa')) {
+                acc['Made in USA'] = (acc['Made in USA'] || 0) + 1;
+            } else if (brand.tags.includes('assembled_in_usa')) {
+                acc['Assembled in USA'] = (acc['Assembled in USA'] || 0) + 1;
+            } else if (brand.tags.includes('foreign_owned')) {
+                acc['Foreign Sourced/Owned'] = (acc['Foreign Sourced/Owned'] || 0) + 1;
+            }
+            return acc;
+        }, {});
+        
+        const chartData = {
+            labels: Object.keys(originCounts),
+            datasets: [{
+                data: Object.values(originCounts),
+                backgroundColor: ['#43A047', '#1E88E5', '#F4511E'],
+                borderColor: '#FDFBF8',
+                borderWidth: 4
+            }]
+        };
+
+        if (originChart) {
+            originChart.destroy();
+        }
+
+        originChart = new Chart(originChartCanvas, {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: { size: 14 }
+                        }
+                    },
+                    tooltip: {
+                        bodyFont: { size: 14 },
+                        titleFont: { size: 16 }
+                    }
+                }
+            }
+        });
+    };
+
+    filterContainer.querySelector('[data-filter-group="category"] [data-filter="all"]').classList.add('active');
+    filterContainer.querySelector('[data-filter-group="origin"] [data-filter="all"]').classList.add('active');
+    filterContainer.querySelector('[data-filter-group="verification"] [data-filter="all"]').classList.add('active');
+    
+    renderBrands(brands);
+    initializeChart();
+});
+</script>
+</body>
+</html>
