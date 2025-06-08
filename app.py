@@ -1,41 +1,50 @@
+import os
+import json
 from flask import Flask, render_template, request, jsonify
 
 # Initialize the Flask app
 app = Flask(__name__)
 
-# Define the main route for the directory
+# --- Primary Page Routes ---
+
 @app.route('/')
 def home():
-    # This will look for 'index.html' in your 'templates' folder
     return render_template('index.html')
 
-# Define the new route for the blog
 @app.route('/blog')
 def blog():
-    # This will look for 'blog.html' in your 'templates' folder
     return render_template('blog.html')
 
-# Define the new route for the About Us page
 @app.route('/about')
 def about():
-    # This will look for 'about.html' in your 'templates' folder
     return render_template('about.html')
 
-# This is the new route to handle brand suggestions
+# --- API Routes ---
+
+@app.route('/api/brands')
+def get_brands():
+    try:
+        # Construct the full path to the JSON file
+        json_file_path = os.path.join(app.root_path, 'brands.json')
+        with open(json_file_path, 'r') as f:
+            brands_data = json.load(f)
+        return jsonify(brands_data)
+    except Exception as e:
+        # Log the error for debugging and return an error response
+        print(f"Error reading brands.json: {e}")
+        return jsonify({"error": "Could not load brand data."}), 500
+
 @app.route('/suggest', methods=['POST'])
 def suggest():
-    # Get the data sent from the form
     data = request.get_json()
     brand_name = data.get('brand_name')
     brand_website = data.get('brand_website')
 
-    # Print the data to your terminal
     print("--- New Brand Suggestion Received ---")
     print(f"Brand Name: {brand_name}")
     print(f"Website: {brand_website}")
     print("------------------------------------")
-
-    # Send a success response back to the browser
+    
     return jsonify({'status': 'success', 'message': 'Thank you for your suggestion!'})
 
 if __name__ == '__main__':
