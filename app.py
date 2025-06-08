@@ -15,6 +15,12 @@ def blog():
     # This will look for 'blog.html' in your 'templates' folder
     return render_template('blog.html')
 
+# Define the new route for the About Us page
+@app.route('/about')
+def about():
+    # This will look for 'about.html' in your 'templates' folder
+    return render_template('about.html')
+
 # This is the new route to handle brand suggestions
 @app.route('/suggest', methods=['POST'])
 def suggest():
