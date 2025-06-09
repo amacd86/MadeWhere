@@ -9,8 +9,9 @@ db = None
 # This corrected block ensures the app is initialized only once.
 if not firebase_admin._apps:
     try:
-        # This path works for both local development and PythonAnywhere
-        cred_path = os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json')
+        # Use an absolute path for the service account key on PythonAnywhere
+        # This makes sure the server can always find the file.
+        cred_path = '/home/frznlogr/MadeWhere/serviceAccountKey.json'
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
         db = firestore.client()
