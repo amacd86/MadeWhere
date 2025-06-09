@@ -1,11 +1,31 @@
 import os
 import json
+import firebase_admin
+from firebase_admin import credentials, firestore
 from flask import Flask, render_template, request, jsonify
 
-# Initialize the Flask app
+# --- Firebase Initialization ---
+# This code block initializes a connection to your Firestore database.
+# It looks for the secret key file you uploaded to PythonAnywhere.
+try:
+    cred_path = os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json')
+    cred = credentials.Certificate(cred_path)
+    firebase_admin.initialize_app(cred)
+    print("Firebase App initialized successfully.")
+except Exception as e:
+    print(f"Firebase initialization error: {e}")
+    if 'already exists' not in str(e).lower():
+         # If it's an error other than 'already initialized', we should know.
+         # In a real production app, you might handle this more gracefully.
+         pass
+
+# Get a client instance for the Firestore database
+db = firestore.client()
+
+# --- Flask App Initialization ---
 app = Flask(__name__)
 
-# --- Primary Page Routes ---
+# --- Page Routes ---
 
 @app.route('/')
 def home():
@@ -24,15 +44,17 @@ def about():
 @app.route('/api/brands')
 def get_brands():
     try:
-        # Construct the full path to the JSON file
-        json_file_path = os.path.join(app.root_path, 'brands.json')
-        with open(json_file_path, 'r') as f:
-            brands_data = json.load(f)
-        return jsonify(brands_data)
+        # Get all documents from the 'brands' collection in Firestore
+        brands_ref = db.collection('brands')
+        docs = brands_ref.stream()
+
+        # Format the documents into a list of dictionaries
+        brands_list = [doc.to_dict() for doc in docs]
+        
+        return jsonify(brands_list)
     except Exception as e:
-        # Log the error for debugging and return an error response
-        print(f"Error reading brands.json: {e}")
-        return jsonify({"error": "Could not load brand data."}), 500
+        print(f"Error fetching from Firestore: {e}")
+        return jsonify({"error": "Could not load brand data from database."}), 500
 
 @app.route('/suggest', methods=['POST'])
 def suggest():
@@ -44,6 +66,9 @@ def suggest():
     print(f"Brand Name: {brand_name}")
     print(f"Website: {brand_website}")
     print("------------------------------------")
+    
+    # Here is where you would eventually add code to save the suggestion
+    # to a 'suggestions' collection in Firestore.
     
     return jsonify({'status': 'success', 'message': 'Thank you for your suggestion!'})
 
