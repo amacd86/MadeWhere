@@ -4,30 +4,32 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from flask import Flask, render_template, request, jsonify
 
+# --- Flask App Initialization ---
+# We initialize the Flask app first so we can use its context to find our files.
+app = Flask(__name__)
+
+
 # --- Firebase Initialization ---
 db = None
 # This corrected block ensures the app is initialized only once.
 if not firebase_admin._apps:
     try:
-        # Use an absolute path for the service account key on PythonAnywhere
-        # This makes sure the server can always find the file.
-        cred_path = '/home/frznlogr/MadeWhere/serviceAccountKey.json'
+        # Build the path to the key file relative to the app's root path
+        # This is a more robust way to find the file on any server.
+        cred_path = os.path.join(app.root_path, 'serviceAccountKey.json')
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
-        db = firestore.client()
         print("Firebase App initialized successfully.")
     except Exception as e:
         print(f"CRITICAL: Firebase initialization failed. Check your serviceAccountKey.json.")
         print(f"Error: {e}")
-        # The app will still run, but the API will return an error.
+        # In a real app, you might want to handle this more gracefully
+        # by logging the error and showing a user-friendly error page.
         pass
-else:
-    # If the app was already initialized (e.g., in a different process), get the client
+
+# Get a client instance for the Firestore database, only if initialization was successful
+if firebase_admin._apps:
     db = firestore.client()
-
-
-# --- Flask App Initialization ---
-app = Flask(__name__)
 
 
 # --- Page Routes ---
