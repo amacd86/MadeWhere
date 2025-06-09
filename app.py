@@ -5,21 +5,20 @@ from firebase_admin import credentials, firestore
 from flask import Flask, render_template, request, jsonify
 
 # --- Firebase Initialization ---
-# This code block initializes a connection to your Firestore database.
-# It looks for the secret key file you uploaded to PythonAnywhere.
-try:
-    cred_path = os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json')
-    cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred)
-    print("Firebase App initialized successfully.")
-except Exception as e:
-    print(f"Firebase initialization error: {e}")
-    if 'already exists' not in str(e).lower():
-         # If it's an error other than 'already initialized', we should know.
-         # In a real production app, you might handle this more gracefully.
-         pass
+# This corrected block ensures the app is initialized only once.
+if not firebase_admin._apps:
+    try:
+        cred_path = os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json')
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+        print("Firebase App initialized successfully.")
+    except Exception as e:
+        print(f"Error initializing Firebase: {e}")
+        # In a real app, you might want to handle this more gracefully
+        # For now, we'll let it fail loudly if the key is missing.
+        # This will prevent the app from starting with a broken db connection.
+        raise
 
-# Get a client instance for the Firestore database
 db = firestore.client()
 
 # --- Flask App Initialization ---
