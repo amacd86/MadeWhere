@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+ENV/
+.venv/
+*.env
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Firebase credentials
+# Ignore the secret Firebase key
+serviceAccountKey.json
+
+# Local data
+brands.json
+
+# Misc
+*.log

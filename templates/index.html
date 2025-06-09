@@ -183,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
         suggestMessage: document.getElementById('suggest-message'),
         brandCount: document.getElementById('brand-count'),
         mapSvg: d3.select("#us-map"),
+        mapContainer: d3.select("#map-container"),
         stateSelect: document.getElementById('state-select'),
     };
 
@@ -266,12 +267,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const us = await d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json");
             const projection = d3.geoAlbersUsa().fitSize([975, 610], topojson.feature(us, us.objects.nation));
             const path = d3.geoPath().projection(projection);
+            const zoom = d3.zoom().scaleExtent([1, 8]).on("zoom", zoomed);
 
-            ui.mapSvg.append("g").selectAll("path").data(topojson.feature(us, us.objects.states).features).join("path").attr("d", path);
+            const mapGroup = ui.mapSvg.append("g");
+
+            mapGroup.selectAll("path")
+                .data(topojson.feature(us, us.objects.states).features)
+                .join("path")
+                .attr("d", path);
 
             const brandsWithCoords = allBrands.filter(d => d.coordinates && d.coordinates.length === 2);
 
-            ui.mapSvg.append("g").selectAll("circle").data(brandsWithCoords).join("circle").attr("class", "brand-dot").attr("transform", d => `translate(${projection(d.coordinates)})`).attr("r", 6).on("click", (event, d) => openBrandModal(d)).append("title").text(d => `${d.name} (${d.location})`);
+            const dots = mapGroup.append("g")
+                .selectAll("circle")
+                .data(brandsWithCoords)
+                .join("circle")
+                .attr("class", "brand-dot")
+                .attr("transform", d => `translate(${projection(d.coordinates)})`)
+                .attr("r", 5)
+                .on("click", (event, d) => openBrandModal(d))
+                .append("title")
+                .text(d => `${d.name} (${d.location})`);
+
+            ui.mapSvg.call(zoom);
+
+            function zoomed(event) {
+                const {transform} = event;
+                mapGroup.attr("transform", transform);
+                mapGroup.selectAll(".brand-dot")
+                    .attr('r', 5 / transform.k)
+                    .attr('stroke-width', 1.5 / transform.k);
+            }
+
         } catch (error) {
             console.error("Error loading or rendering map:", error);
             document.getElementById('map-container').innerHTML = '<p class="text-center text-red-500">Could not load map data.</p>';

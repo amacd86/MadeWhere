@@ -5,24 +5,29 @@ from firebase_admin import credentials, firestore
 from flask import Flask, render_template, request, jsonify
 
 # --- Firebase Initialization ---
+db = None
 # This corrected block ensures the app is initialized only once.
 if not firebase_admin._apps:
     try:
+        # This path works for both local development and PythonAnywhere
         cred_path = os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json')
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
+        db = firestore.client()
         print("Firebase App initialized successfully.")
     except Exception as e:
-        print(f"Error initializing Firebase: {e}")
-        # In a real app, you might want to handle this more gracefully
-        # For now, we'll let it fail loudly if the key is missing.
-        # This will prevent the app from starting with a broken db connection.
-        raise
+        print(f"CRITICAL: Firebase initialization failed. Check your serviceAccountKey.json.")
+        print(f"Error: {e}")
+        # The app will still run, but the API will return an error.
+        pass
+else:
+    # If the app was already initialized (e.g., in a different process), get the client
+    db = firestore.client()
 
-db = firestore.client()
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
+
 
 # --- Page Routes ---
 
@@ -42,6 +47,11 @@ def about():
 
 @app.route('/api/brands')
 def get_brands():
+    # Check if the database connection was successful
+    if db is None:
+        print("Firestore client is not available. Check initialization logs.")
+        return jsonify({"error": "The database is not connected. Please check server logs."}), 500
+    
     try:
         # Get all documents from the 'brands' collection in Firestore
         brands_ref = db.collection('brands')
@@ -70,6 +80,7 @@ def suggest():
     # to a 'suggestions' collection in Firestore.
     
     return jsonify({'status': 'success', 'message': 'Thank you for your suggestion!'})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
