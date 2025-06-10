@@ -25,3 +25,6 @@ brands.json
 
 # Misc
 *.log
+
+#Gemini API Key
+.env

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MadeWhere - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .modal { transition: opacity 0.3s ease; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">Admin Dashboard</h1>
+            <p class="mt-2 text-lg text-gray-600">Review new brand suggestions.</p>
+            <a href="/" class="mt-4 inline-block text-indigo-600 hover:text-indigo-800 font-semibold">&larr; Back to Main Site</a>
+        </header>
+
+        <main id="suggestions-container" class="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
+            <h2 class="text-2xl font-semibold mb-6">New Suggestions</h2>
+            <div id="suggestions-list" class="space-y-4">
+                <p id="loading-message">Loading suggestions...</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Approval Modal -->
+    <div id="approval-modal" class="modal fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <form id="approval-form" class="p-8 space-y-4">
+                <div class="flex justify-between items-start">
+                    <h2 class="text-2xl font-bold">Approve Brand</h2>
+                    <button type="button" id="research-btn" class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700">
+                        🤖 Auto-Research
+                    </button>
+                </div>
+                <p id="research-status" class="text-sm text-gray-500 h-5"></p>
+                <input type="hidden" id="suggestion-id">
+                <div>
+                    <label for="approve-brand-name" class="block text-sm font-medium text-gray-700">Brand Name</label>
+                    <input type="text" id="approve-brand-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>
+                </div>
+                <div>
+                    <label for="approve-brand-website" class="block text-sm font-medium text-gray-700">Website</label>
+                    <input type="url" id="approve-brand-website" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>
+                </div>
+                <div>
+                    <label for="approve-summary" class="block text-sm font-medium text-gray-700">Summary</label>
+                    <textarea id="approve-summary" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required></textarea>
+                </div>
+                 <div>
+                    <label for="approve-verdict" class="block text-sm font-medium text-gray-700">Verdict</label>
+                    <textarea id="approve-verdict" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="approve-location" class="block text-sm font-medium text-gray-700">Location (City, ST)</label>
+                        <input type="text" id="approve-location" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                     <div>
+                        <label for="approve-state" class="block text-sm font-medium text-gray-700">State Abbreviation</label>
+                        <input type="text" id="approve-state" maxlength="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" required>
+                    </div>
+                </div>
+                 <div>
+                    <label for="approve-region" class="block text-sm font-medium text-gray-700">Region</label>
+                    <select id="approve-region" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white">
+                        <option>new_england</option><option>northeast</option><option>southeast</option><option>appalachia</option><option>rust_belt</option><option>midwest</option><option>southwest</option><option>mountain_west</option><option>pacific</option><option>west_coast</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Categories (comma separated)</label>
+                    <input type="text" id="approve-categories" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="e.g. tools,outdoor">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tags (comma separated)</label>
+                    <input type="text" id="approve-tags" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="e.g. made_in_usa,us_owned,verified">
+                </div>
+                <div class="pt-4 flex justify-end gap-3">
+                    <button type="button" id="close-approval-modal-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700">Save Approved Brand</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const suggestionsList = document.getElementById('suggestions-list');
+    const loadingMessage = document.getElementById('loading-message');
+    const approvalModal = document.getElementById('approval-modal');
+    const approvalForm = document.getElementById('approval-form');
+    const closeApprovalBtn = document.getElementById('close-approval-modal-btn');
+    const researchBtn = document.getElementById('research-btn');
+    const researchStatus = document.getElementById('research-status');
+
+    async function fetchSuggestions() {
+        try {
+            const response = await fetch('/api/suggestions');
+            const suggestions = await response.json();
+            loadingMessage.classList.add('hidden');
+            
+            if (suggestions.length === 0) {
+                suggestionsList.innerHTML = '<p class="text-gray-500">No new suggestions to review.</p>';
+                return;
+            }
+
+            suggestionsList.innerHTML = ''; 
+
+            suggestions.forEach(suggestion => {
+                const card = document.createElement('div');
+                card.className = 'p-4 border rounded-lg flex items-center justify-between';
+                card.dataset.id = suggestion.id;
+                
+                card.innerHTML = `
+                    <div>
+                        <h3 class="font-bold text-lg">${suggestion.brand_name}</h3>
+                        <a href="${suggestion.brand_website}" target="_blank" class="text-indigo-600 hover:underline">${suggestion.brand_website}</a>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="approve-btn bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition-colors" data-id="${suggestion.id}" data-name="${suggestion.brand_name}" data-website="${suggestion.brand_website}">Approve</button>
+                        <button class="reject-btn bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition-colors" data-id="${suggestion.id}">Reject</button>
+                    </div>
+                `;
+                suggestionsList.appendChild(card);
+            });
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+            loadingMessage.textContent = 'Failed to load suggestions.';
+        }
+    }
+
+    async function handleSuggestionAction(id, action) {
+        try {
+            const response = await fetch(`/api/${action}/${id}`, { method: 'POST' });
+            if (response.ok) {
+                const card = document.querySelector(`[data-id="${id}"]`);
+                if (card) {
+                    card.remove(); 
+                }
+                 if(suggestionsList.children.length === 0) {
+                    suggestionsList.innerHTML = '<p class="text-gray-500">No new suggestions to review.</p>';
+                 }
+            } else {
+                alert(`Failed to ${action} suggestion.`);
+            }
+        } catch (error) {
+            console.error(`Error during ${action}:`, error);
+        }
+    }
+    
+    function openApprovalModal(suggestion) {
+        researchStatus.className = 'text-sm text-gray-500 h-5';
+        researchStatus.textContent = '';
+        approvalForm.reset();
+        document.getElementById('suggestion-id').value = suggestion.id;
+        document.getElementById('approve-brand-name').value = suggestion.name;
+        document.getElementById('approve-brand-website').value = suggestion.website;
+        approvalModal.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeApprovalModal() {
+        approvalModal.classList.add('opacity-0', 'pointer-events-none');
+    }
+    
+    researchBtn.addEventListener('click', async () => {
+        const suggestionId = document.getElementById('suggestion-id').value;
+        if (!suggestionId) return;
+
+        researchStatus.className = 'text-sm text-blue-600 h-5';
+        researchStatus.textContent = '🤖 Researching with AI...';
+        researchBtn.disabled = true;
+
+        try {
+            const response = await fetch(`/api/research/${suggestionId}`, { method: 'POST' });
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('approve-summary').value = data.summary || '';
+                document.getElementById('approve-verdict').value = data.verdict || '';
+                document.getElementById('approve-location').value = data.location || '';
+                document.getElementById('approve-state').value = data.state || '';
+                document.getElementById('approve-region').value = data.region || 'northeast';
+                document.getElementById('approve-categories').value = (data.categories || []).join(', ');
+                document.getElementById('approve-tags').value = (data.tags || []).join(', ');
+                researchStatus.className = 'text-sm text-green-600 h-5';
+                researchStatus.textContent = '✅ Research complete!';
+            } else {
+                researchStatus.className = 'text-sm text-red-600 h-5';
+                researchStatus.textContent = `Error: ${data.error || 'Unknown error'}`;
+            }
+        } catch (error) {
+            console.error('Research error:', error);
+            researchStatus.className = 'text-sm text-red-600 h-5';
+            researchStatus.textContent = 'An unexpected error occurred.';
+        } finally {
+            researchBtn.disabled = false;
+        }
+    });
+
+    suggestionsList.addEventListener('click', (e) => {
+        const target = e.target;
+        const suggestionId = target.dataset.id;
+
+        if (target.classList.contains('approve-btn')) {
+             openApprovalModal({
+                id: suggestionId,
+                name: target.dataset.name,
+                website: target.dataset.website
+            });
+        } else if (target.classList.contains('reject-btn')) {
+            if(confirm('Are you sure you want to reject this suggestion?')) {
+               handleSuggestionAction(suggestionId, 'reject');
+            }
+        }
+    });
+    
+    approvalForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const suggestionId = document.getElementById('suggestion-id').value;
+        const brandData = {
+            name: document.getElementById('approve-brand-name').value,
+            website: document.getElementById('approve-brand-website').value,
+            summary: document.getElementById('approve-summary').value,
+            verdict: document.getElementById('approve-verdict').value,
+            location: document.getElementById('approve-location').value,
+            state: document.getElementById('approve-state').value,
+            region: document.getElementById('approve-region').value,
+            categories: document.getElementById('approve-categories').value,
+            tags: document.getElementById('approve-tags').value,
+        };
+
+        try {
+            const response = await fetch(`/api/approve/${suggestionId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(brandData)
+            });
+
+            if (response.ok) {
+                closeApprovalModal();
+                const card = document.querySelector(`[data-id="${suggestionId}"]`);
+                if (card) {
+                    card.remove();
+                }
+                 if(suggestionsList.children.length === 0) {
+                    suggestionsList.innerHTML = '<p class="text-gray-500">No new suggestions to review.</p>';
+                 }
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to approve suggestion: ${errorData.error}`);
+            }
+        } catch (error) {
+            console.error('Error approving suggestion:', error);
+            alert('An unexpected error occurred.');
+        }
+    });
+
+    closeApprovalBtn.addEventListener('click', closeApprovalModal);
+    
+    fetchSuggestions();
+});
+</script>
+</body>
+</html>
