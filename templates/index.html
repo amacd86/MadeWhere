@@ -73,32 +73,24 @@
             </div>
         </header>
 
-        <!-- Map Section -->
-        <section id="map-section" class="mb-16">
-            <h2 class="text-3xl font-bold text-center mb-8">Manufacturing Hotspots</h2>
-            <div id="map-container" class="bg-white p-2 sm:p-4 rounded-2xl shadow-sm border border-gray-200">
-                <svg id="us-map" preserveAspectRatio="xMidYMid meet" viewBox="0 0 975 610" class="w-full h-auto"></svg>
+        <!-- Main Content -->
+        <main>
+            <!-- Mobile Filter Button -->
+            <div class="lg:hidden mb-4">
+                <button id="open-filter-btn" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1.447.894l-2-1A1 1 0 018 16v-3.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" /></svg>
+                    Filters
+                </button>
             </div>
-        </section>
-
-        <!-- Featured Brands Section -->
-        <section id="featured-brands-section" class="mb-16">
-            <h2 class="text-3xl font-bold text-center mb-8">Featured American Artisans</h2>
-            <div id="featured-brands-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            </div>
-        </section>
-
-        <!-- Main Directory Section -->
-        <section id="directory-section">
-             <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold">The Directory</h2>
-                <p class="text-gray-600 mt-2">Currently vetting <span id="brand-count" class="font-bold text-indigo-600">0</span> brands. Use the filters to find what you need.</p>
-             </div>
+            
             <div class="lg:grid lg:grid-cols-12 lg:gap-8">
-                <aside class="lg:col-span-3 mb-8 lg:mb-0">
-                    <!-- This div is the key to the fix. It is sticky and has a max-height and overflow control. -->
-                    <div class="sticky top-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 max-h-[calc(100vh-4rem)] overflow-y-auto">
-                        <h3 class="text-xl font-semibold mb-4">Find a Brand</h3>
+                <!-- Filter Drawer -->
+                <aside id="filter-drawer" class="drawer fixed top-0 left-0 z-40 h-screen p-4 overflow-y-auto w-80 bg-white transform -translate-x-full lg:relative lg:z-auto lg:translate-x-0 lg:col-span-3 lg:bg-transparent lg:p-0">
+                    <div class="lg:sticky lg:top-8 lg:bg-white lg:p-6 lg:rounded-2xl lg:shadow-sm lg:border lg:border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                             <h3 class="text-xl font-semibold">Filters</h3>
+                             <button id="close-filter-btn" class="lg:hidden text-gray-500 hover:text-gray-800">&times;</button>
+                        </div>
                         <input type="text" id="search-input" placeholder="Search brands or products..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-6">
                         <div id="filters">
                              <h4 class="font-semibold mb-3 text-gray-800">Category</h4>
@@ -140,16 +132,38 @@
                         </div>
                     </div>
                 </aside>
-                <main class="lg:col-span-9">
-                    <div id="brand-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
-                    <div id="no-results" class="text-center py-16 hidden">
-                        <h3 class="text-2xl font-semibold text-gray-700">No Brands Found</h3>
-                        <p class="text-gray-500 mt-2">Try adjusting your search or filters.</p>
-                    </div>
-                </main>
+
+                <div class="lg:col-span-9">
+                    <section id="map-section" class="mb-16">
+                        <h2 class="text-3xl font-bold text-center mb-8">Manufacturing Hotspots</h2>
+                        <div id="map-container" class="bg-white p-2 sm:p-4 rounded-2xl shadow-sm border border-gray-200">
+                            <svg id="us-map" preserveAspectRatio="xMidYMid meet" viewBox="0 0 975 610" class="w-full h-auto"></svg>
+                        </div>
+                    </section>
+
+                    <section id="featured-brands-section" class="mb-16">
+                        <h2 class="text-3xl font-bold text-center mb-8">Featured American Artisans</h2>
+                        <div id="featured-brands-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+                    </section>
+
+                    <section id="directory-section">
+                        <div class="text-center mb-12">
+                            <h2 class="text-3xl font-bold">The Directory</h2>
+                            <p class="text-gray-600 mt-2">Currently vetting <span id="brand-count" class="font-bold text-indigo-600">0</span> brands.</p>
+                        </div>
+                        <div id="brand-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+                        <div id="no-results" class="text-center py-16 hidden">
+                            <h3 class="text-2xl font-semibold text-gray-700">No Brands Found</h3>
+                            <p class="text-gray-500 mt-2">Try adjusting your search or filters.</p>
+                        </div>
+                    </section>
+                </div>
             </div>
-        </section>
+        </main>
     </div>
+
+    <!-- Filter Drawer Overlay -->
+    <div id="drawer-overlay" class="drawer-overlay fixed inset-0 bg-black bg-opacity-50 z-30 opacity-0 pointer-events-none"></div>
 
     <!-- Modals -->
     <div id="brand-modal" class="modal fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none">
@@ -183,8 +197,12 @@ document.addEventListener('DOMContentLoaded', () => {
         suggestMessage: document.getElementById('suggest-message'),
         brandCount: document.getElementById('brand-count'),
         mapSvg: d3.select("#us-map"),
-        mapContainer: d3.select("#map-container"),
+        mapContainer: document.getElementById('map-container'),
         stateSelect: document.getElementById('state-select'),
+        filterDrawer: document.getElementById('filter-drawer'),
+        drawerOverlay: document.getElementById('drawer-overlay'),
+        openFilterBtn: document.getElementById('open-filter-btn'),
+        closeFilterBtn: document.getElementById('close-filter-btn'),
     };
 
     const state = {
@@ -410,6 +428,20 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('directory-section').innerHTML = '<p class="text-center text-red-500 font-semibold">Error: Could not load brand data. Please try refreshing the page.</p>';
         }
     }
+
+    function openFilterDrawer() {
+        ui.filterDrawer.classList.remove('-translate-x-full');
+        ui.drawerOverlay.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeFilterDrawer() {
+        ui.filterDrawer.classList.add('-translate-x-full');
+        ui.drawerOverlay.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    ui.openFilterBtn.addEventListener('click', openFilterDrawer);
+    ui.closeFilterBtn.addEventListener('click', closeFilterDrawer);
+    ui.drawerOverlay.addEventListener('click', closeFilterDrawer);
 
     initializeApp();
 });
