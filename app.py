@@ -70,20 +70,40 @@ def get_brands():
 
 @app.route('/suggest', methods=['POST'])
 def suggest():
-    data = request.get_json()
-    brand_name = data.get('brand_name')
-    brand_website = data.get('brand_website')
+    # Check if the database connection was successful
+    if db is None:
+        print("Firestore client is not available. Cannot save suggestion.")
+        return jsonify({"error": "The database is not connected. Please try again later."}), 500
 
-    print("--- New Brand Suggestion Received ---")
-    print(f"Brand Name: {brand_name}")
-    print(f"Website: {brand_website}")
-    print("------------------------------------")
-    
-    # Here is where you would eventually add code to save the suggestion
-    # to a 'suggestions' collection in Firestore.
-    
-    return jsonify({'status': 'success', 'message': 'Thank you for your suggestion!'})
+    try:
+        data = request.get_json()
+        brand_name = data.get('brand_name')
+        brand_website = data.get('brand_website')
 
+        if not brand_name or not brand_website:
+            return jsonify({'status': 'error', 'message': 'Missing brand name or website.'}), 400
+
+        # Create a new document in a 'suggestions' collection
+        suggestion_data = {
+            'brand_name': brand_name,
+            'brand_website': brand_website,
+            'timestamp': firestore.SERVER_TIMESTAMP, # Use server time for consistency
+            'status': 'new' # Default status for a new suggestion
+        }
+        
+        # Add a new doc with a generated ID
+        db.collection('suggestions').add(suggestion_data)
+
+        print("--- New Brand Suggestion Saved to Firestore ---")
+        print(f"Brand Name: {brand_name}")
+        print(f"Website: {brand_website}")
+        print("------------------------------------")
+    
+        return jsonify({'status': 'success', 'message': 'Thank you for your suggestion!'})
+
+    except Exception as e:
+        print(f"Error saving suggestion to Firestore: {e}")
+        return jsonify({"error": "Could not save suggestion."}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
