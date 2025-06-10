@@ -88,11 +88,10 @@
         </header>
 
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Main layout container -->
             <div class="relative">
-                 <!-- Filter Button (Visible on all screens) -->
-                <div class="mb-4">
-                    <button id="open-filter-btn" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 font-medium shadow-sm lg:w-auto lg:px-6 lg:py-3">
+                <!-- Filter Button (Visible on all screens) -->
+                <div class="mb-6">
+                    <button id="open-filter-btn" class="w-full flex items-center justify-center px-6 py-3 border border-gray-300 rounded-xl text-gray-700 bg-white hover:bg-gray-50 shadow-sm font-medium">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 12.414V17a1 1 0 01-1.447.894l-2-1A1 1 0 018 16v-3.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" /></svg>
                         Filters & Search
                     </button>
@@ -101,7 +100,7 @@
                 <!-- Filter Drawer -->
                 <aside id="filter-drawer" class="drawer fixed top-0 left-0 z-40 h-screen w-80 bg-white transform -translate-x-full">
                     <div class="h-full flex flex-col">
-                        <div class="p-6">
+                        <div class="p-6 border-b border-gray-200">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 class="text-xl font-semibold">Filters</h3>
                                 <button id="close-filter-btn" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
@@ -176,7 +175,7 @@
                     </div>
                 </aside>
 
-                <!-- Main Content -->
+                <!-- Main Content Area -->
                 <div class="w-full">
                     <section id="map-section" class="mb-12">
                         <h2 class="text-3xl font-bold text-gray-800 mb-6">Manufacturing Hotspots</h2>
@@ -241,11 +240,12 @@ document.addEventListener('DOMContentLoaded', () => {
         suggestMessage: document.getElementById('suggest-message'),
         brandCount: document.getElementById('brand-count'),
         mapSvg: d3.select("#us-map"),
-        mapContainer: d3.select("#map-container"),
+        mapContainer: document.getElementById('map-container'),
         filterDrawer: document.getElementById('filter-drawer'),
         drawerOverlay: document.getElementById('drawer-overlay'),
         openFilterBtn: document.getElementById('open-filter-btn'),
         closeFilterBtn: document.getElementById('close-filter-btn'),
+        stateSelect: document.getElementById('state-select'),
     };
 
     const state = {
@@ -313,7 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let locationMatch = true;
             if (state.filters.location !== 'all_locations') {
-                const stateSelect = document.getElementById('state-select');
                 if (state.filters.location.length === 2) { 
                     locationMatch = brand.state === state.filters.location;
                 } else { 
@@ -324,6 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return (nameMatch || summaryMatch) && categoryMatch && originMatch && verificationMatch && locationMatch;
         });
         renderBrands(filteredBrands, ui.brandGrid);
+        updateMapDots(filteredBrands);
         ui.noResultsDiv.classList.toggle('hidden', filteredBrands.length > 0);
     };
 
@@ -338,32 +338,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('close-brand-modal-btn').addEventListener('click', () => closeModal(ui.brandModal));
     };
 
+    let projection, mapGroup; 
+
     const renderMap = async () => {
         try {
             const us = await d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json");
-            const projection = d3.geoAlbersUsa().fitSize([975, 610], topojson.feature(us, us.objects.nation));
+            projection = d3.geoAlbersUsa().fitSize([975, 610], topojson.feature(us, us.objects.nation));
             const path = d3.geoPath().projection(projection);
             const zoom = d3.zoom().scaleExtent([1, 8]).on("zoom", zoomed);
 
-            const mapGroup = ui.mapSvg.append("g");
+            mapGroup = ui.mapSvg.append("g");
 
             mapGroup.selectAll("path")
                 .data(topojson.feature(us, us.objects.states).features)
                 .join("path")
                 .attr("d", path);
-
-            const brandsWithCoords = allBrands.filter(d => d.coordinates && d.coordinates.length === 2);
-
-            const dots = mapGroup.append("g")
-                .selectAll("circle")
-                .data(brandsWithCoords)
-                .join("circle")
-                .attr("class", "brand-dot")
-                .attr("transform", d => `translate(${projection(d.coordinates)})`)
-                .attr("r", 5)
-                .on("click", (event, d) => openBrandModal(d))
-                .append("title")
-                .text(d => `${d.name} (${d.location})`);
 
             ui.mapSvg.call(zoom);
 
@@ -380,6 +369,25 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('map-container').innerHTML = '<p class="text-center text-red-500">Could not load map data.</p>';
         }
     };
+    
+    function updateMapDots(brandsToDisplay) {
+        if (!projection || !mapGroup) return;
+
+        const brandsWithCoords = brandsToDisplay.filter(d => d.coordinates && d.coordinates.length === 2);
+        
+        mapGroup.selectAll(".brand-dot").remove(); 
+        
+        mapGroup.append("g")
+            .selectAll("circle")
+            .data(brandsWithCoords)
+            .join("circle")
+            .attr("class", "brand-dot")
+            .attr("transform", d => `translate(${projection(d.coordinates)})`)
+            .attr("r", 5)
+            .on("click", (event, d) => openBrandModal(d))
+            .append("title")
+            .text(d => `${d.name} (${d.location})`);
+    }
     
     const populateStateFilter = () => {
         const statesInDb = [...new Set(allBrands.map(b => b.state).filter(s => s))].sort();
@@ -408,8 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const stateSelect = document.getElementById('state-select');
-    stateSelect.addEventListener('change', (e) => {
+    ui.stateSelect.addEventListener('change', (e) => {
         const selectedState = e.target.value;
         document.querySelectorAll('[data-filter-group="location"] .filter-btn').forEach(b => b.classList.remove('active'));
         if (selectedState === 'all_states') {
@@ -480,8 +487,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderBrands(featuredBrands, ui.featuredGrid);
             
             populateStateFilter();
+            await renderMap();
             applyFiltersAndRender();
-            renderMap();
         } catch (error) {
             console.error("Failed to initialize app:", error);
             document.getElementById('directory-section').innerHTML = '<p class="text-center text-red-500 font-semibold">Error: Could not load brand data. Please try refreshing the page.</p>';
@@ -492,4 +499,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-</html>
+</ht
