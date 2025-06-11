@@ -160,7 +160,6 @@ def research_suggestion(suggestion_id):
         print(error_message)
         return jsonify({"error": error_message}), 500
 
-# ... (approve and reject routes are unchanged) ...
 @app.route('/api/approve/<suggestion_id>', methods=['POST'])
 @auth.login_required
 def approve_suggestion(suggestion_id):
@@ -223,6 +222,89 @@ def suggest():
     except Exception as e:
         print(f"Error saving suggestion: {e}")
         return jsonify({"error": "Could not save suggestion."}), 500
+
+@app.route('/api/research_existing_brand/<brand_id>', methods=['POST'])
+@auth.login_required
+def research_existing_brand(brand_id):
+    if db is None: return jsonify({"error": "Database not connected."}), 500
+    
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("CRITICAL: GEMINI_API_KEY not found in environment.")
+        return jsonify({"error": "Server is missing an API key."}), 500
+
+    try:
+        brand_ref = db.collection('brands').document(str(brand_id))
+        brand = brand_ref.get().to_dict()
+        if not brand or 'website' not in brand:
+            return jsonify({"error": "Invalid brand data or missing website"}), 404
+
+        brand_name = brand.get('name')
+        print(f"Initiating research for existing brand: {brand_name}")
+        
+        try:
+            site_response = requests.get(brand['website'], timeout=15)
+            site_content = bleach.clean(site_response.text, strip=True, tags=[]).strip()
+            # Sanitize and limit content to prevent issues
+            site_content = ' '.join(site_content.split())[:15000] 
+        except requests.RequestException as e:
+            return jsonify({"error": f"Could not browse website: {e}"}), 500
+
+        # Improved prompt with stricter instructions for the AI
+        prompt = f"""
+        Analyze the following website content for the company named "{brand_name}". 
+        Based ONLY on the text provided, act as a business analyst.
+
+        Website Content:
+        ---
+        {site_content}
+        ---
+
+        CRITICALLY IMPORTANT: Your entire response must be ONLY a single, valid JSON object. 
+        Do not include any other text, markdown, or explanations before or after the JSON.
+        Ensure all strings within the JSON are properly escaped.
+        The JSON object must have these exact keys:
+        - "summary": A one-sentence summary of the company.
+        - "verdict": A one-sentence verdict on their manufacturing claims (e.g., "All products are made in their Ohio factory," or "Manufacturing is global with some US operations.").
+        - "tags": A list of relevant tags. If US manufacturing is confirmed, include "source_verified". Otherwise, include "brand_reported".
+        """
+        
+        api_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
+        
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}], 
+            "generationConfig": {
+                "response_mime_type": "application/json", 
+                "response_schema": {
+                    "type": "OBJECT", 
+                    "properties": { 
+                        "summary": {"type": "STRING"}, 
+                        "verdict": {"type": "STRING"},
+                        "tags": {"type": "ARRAY", "items": {"type": "STRING"}}
+                    }
+                }
+            }
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(api_endpoint, json=payload, headers=headers)
+        
+        if response.status_code != 200:
+            return jsonify({"error": f"Google API Error: {response.status_code}"}), 500
+
+        # Robustly parse the JSON response
+        try:
+            response_text = response.json()['candidates'][0]['content']['parts'][0]['text']
+            researched_data = json.loads(response_text)
+            return jsonify(researched_data)
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"ERROR: Failed to parse JSON from Gemini API. Error: {e}")
+            print(f"Received problematic text: {response_text}")
+            return jsonify({"error": "AI returned malformed data. Please try again."}), 500
+
+    except Exception as e:
+        error_message = f"An unexpected error occurred: {str(e)}"
+        print(error_message)
+        return jsonify({"error": error_message}), 500
 
 
 if __name__ == '__main__':
