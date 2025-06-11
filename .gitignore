@@ -19,6 +19,8 @@ Thumbs.db
 # Firebase credentials
 # Ignore the secret Firebase key
 serviceAccountKey.json
+# Ignore Firebase service account keys
+serviceAccountKey_firebase.json
 
 # Local data
 brands.json
